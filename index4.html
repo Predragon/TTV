@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Third Voice AI</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #2a2a4a;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-family: 'Playfair Display', serif;
+            color: #e94560;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: #a0a0a0;
+        }
+        textarea, select {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #3e3e5e;
+            border-radius: 8px;
+            background-color: #16213e;
+            color: #e0e0e0;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #e94560;
+            color: white;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 700;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button:hover {
+            background-color: #ff6a80;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #e94560;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .suggestion-box {
+            background-color: #3e3e5e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #e94560;
+            font-size: 0.95em;
+            color: #c0c0d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Third Voice AI</h1>
+        <p>Rewrite your messages for clarity, tone, and impact. Analyze what the other person might be feeling.</p><label for="messageInput">Your Message:</label>
+    <textarea id="messageInput" placeholder="Enter your message here..."></textarea>
+
+    <label for="toneSelect">Desired Tone:</label>
+    <select id="toneSelect">
+        <option value="professional">Professional</option>
+        <option value="friendly">Friendly</option>
+        <option value="assertive">Assertive</option>
+        <option value="empathetic">Empathetic</option>
+        <option value="concise">Concise</option>
+        <option value="neutral">Neutral</option>
+    </select>
+
+    <button id="rewriteButton">Rewrite Message</button>
+    <div class="loading-spinner" id="loadingSpinner"></div>
+
+    <div id="output">
+        <div class="suggestion-box" id="rewrittenBox" style="display:none;"></div>
+    </div>
+
+    <hr style="margin: 30px 0; border-color: #444;">
+
+    <label for="incomingMessage">Message You Received:</label>
+    <textarea id="incomingMessage" placeholder="Paste their message here..."></textarea>
+
+    <button id="analyzeButton">Analyze Tone and Feelings</button>
+
+    <div id="analysisOutput" class="suggestion-box" style="display:none;"></div>
+</div>
+
+<script>
+    const rewriteBtn = document.getElementById('rewriteButton');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const rewrittenBox = document.getElementById('rewrittenBox');
+
+    rewriteBtn.addEventListener('click', async () => {
+        const message = document.getElementById('messageInput').value;
+        const tone = document.getElementById('toneSelect').value;
+
+        rewrittenBox.style.display = 'none';
+        rewrittenBox.textContent = '';
+        loadingSpinner.style.display = 'block';
+
+        try {
+            const response = await fetch('/rewrite', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message, tone })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                rewrittenBox.textContent = data.rewrittenText;
+                rewrittenBox.style.display = 'block';
+            } else {
+                rewrittenBox.textContent = `Error: ${data.error || 'Unknown error'}`;
+                rewrittenBox.style.display = 'block';
+            }
+        } catch (err) {
+            rewrittenBox.textContent = `Network error: ${err.message}`;
+            rewrittenBox.style.display = 'block';
+        } finally {
+            loadingSpinner.style.display = 'none';
+        }
+    });
+
+    const analyzeBtn = document.getElementById('analyzeButton');
+    const analysisOutput = document.getElementById('analysisOutput');
+
+    analyzeBtn.addEventListener('click', async () => {
+        const received = document.getElementById('incomingMessage').value;
+
+        analysisOutput.style.display = 'none';
+        analysisOutput.textContent = '';
+
+        try {
+            const response = await fetch('/analyze-tone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: received })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                analysisOutput.innerHTML = `<strong>How they might be feeling:</strong><br>${data.analysis}`;
+                analysisOutput.style.display = 'block';
+            } else {
+                analysisOutput.innerHTML = `<strong>Error:</strong> ${data.error || 'Unknown error'}`;
+                analysisOutput.style.display = 'block';
+            }
+        } catch (err) {
+            analysisOutput.innerHTML = `<strong>Network error:</strong> ${err.message}`;
+            analysisOutput.style.display = 'block';
+        }
+    });
+</script>
+
+</body>
+</html>I 
