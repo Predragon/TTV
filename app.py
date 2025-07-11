@@ -1,47 +1,72 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+import gradio as gr
 from transformers import pipeline
+import os
 
-app = Flask(__name__, static_folder="static", static_url_path="/static")
-CORS(app)
-
-# Load a local model for rewriting (DistilGPT2 is lightweight)
+# Load a lightweight local model for rewriting
 rewrite_pipeline = pipeline("text-generation", model="distilgpt2")
 
-# --- Routes ---
-
-@app.route("/")
-def root():
-    return send_from_directory(".", "index4.html")
-
-@app.route("/rewrite", methods=["POST"])
-def rewrite():
-    data = request.get_json()
-    message = data.get("message", "")
-    tone = data.get("tone", "neutral")
-    # Simple prompt engineering for tone (customize as needed)
+def rewrite_message(message, tone):
     prompt = f"Rewrite this message in a {tone} tone:\n{message}\n"
     result = rewrite_pipeline(prompt, max_length=80, num_return_sequences=1)
     rewritten = result[0]["generated_text"].replace(prompt, "").strip()
-    return jsonify({"rewrittenText": rewritten})
+    return rewritten
 
-@app.route("/analyze-tone", methods=["POST"])
-def analyze_tone():
-    data = request.get_json()
-    message = data.get("message", "")
-    # Simple rule-based tone analysis (replace with ML if desired)
-    if any(word in message.lower() for word in ["angry", "upset", "frustrated"]):
+def analyze_tone(message):
+    # Simple rule-based analysis
+    msg = message.lower()
+    if any(word in msg for word in ["angry", "upset", "frustrated"]):
         analysis = "They might be feeling upset or frustrated."
-    elif any(word in message.lower() for word in ["thanks", "thank", "grateful"]):
+    elif any(word in msg for word in ["thanks", "thank", "grateful"]):
         analysis = "They might be feeling appreciative or thankful."
-    elif any(word in message.lower() for word in ["sorry", "apologize"]):
+    elif any(word in msg for word in ["sorry", "apologize"]):
         analysis = "They might be feeling regretful or apologetic."
     else:
         analysis = "Their feelings are not clear. Consider context or ask for clarification."
-    return jsonify({"analysis": analysis})
+    return analysis
 
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-           
+with gr.Blocks(theme=gr.themes.Monochrome(), css="""
+body { background-color: #1a1a2e !important; }
+.gradio-container { background-color: #2a2a4a !important; color: #e0e0e0 !important; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.4);}
+h1, .gradio-container h1 { color: #e94560 !important; font-family: 'Playfair Display', serif; }
+label, .gradio-label { color: #a0a0a0 !important; font-weight: 700; }
+textarea, select, .gr-input, .gr-textbox { background-color: #16213e !important; color: #e0e0e0 !important; border-radius: 8px !important; }
+button, .gr-button { background-color: #e94560 !important; color: white !important; border-radius: 8px !important; font-weight: 700 !important; }
+button:hover, .gr-button:hover { background-color: #ff6a80 !important; }
+.suggestion-box { background-color: #3e3e5e !important; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #e94560; color: #c0c0d0 !important; font-size: 0.95em; }
+""") as demo:
+    gr.Markdown("""
+    # The Third Voice AI
+    Rewrite your messages for clarity, tone, and impact. Analyze what the other person might be feeling.
+    """)
+    with gr.Row():
+        with gr.Column():
+            gr.Markdown("**Your Message:**")
+            message_input = gr.Textbox(lines=4, placeholder="Enter your message here...")
+            gr.Markdown("**Desired Tone:**")
+            tone_select = gr.Dropdown(
+                ["Professional", "Friendly", "Assertive", "Empathetic", "Concise", "Neutral"],
+                value="Professional",
+                label=None
+            )
+            rewrite_btn = gr.Button("Rewrite Message")
+            rewritten_output = gr.Textbox(label="Rewritten Message", elem_classes="suggestion-box")
+        with gr.Column():
+            gr.Markdown("**Message You Received:**")
+            incoming_input = gr.Textbox(lines=4, placeholder="Paste their message here...")
+            analyze_btn = gr.Button("Analyze Tone and Feelings")
+            analysis_output = gr.Textbox(label="Analysis", elem_classes="suggestion-box")
+    # Actions
+    rewrite_btn.click(
+        rewrite_message,
+        inputs=[message_input, tone_select],
+        outputs=rewritten_output
+    )
+    analyze_btn.click(
+        analyze_tone,
+        inputs=incoming_input,
+        outputs=analysis_output
+    )
+
+port = int(os.environ.get("PORT", 10000))
+demo.launch(server_name="0.0.0.0", server_port=port)
+            
