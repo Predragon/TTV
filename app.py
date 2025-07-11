@@ -1,11 +1,9 @@
 import gradio as gr
-from transformers import pipeline
-
-generator = pipeline("text-generation", model="gpt2")
+import os
 
 def chat(input_text):
-    result = generator(input_text, max_length=50)
-    return result[0]['generated_text']
+    # Simple echo response for testing
+    return f"You said: {input_text}"
 
 iface = gr.Interface(
     fn=chat,
@@ -14,4 +12,6 @@ iface = gr.Interface(
     title="The Third Voice Chatbot"
 )
 
-iface.launch(server_name="0.0.0.0", server_port=10000)
+# Use the port provided by Render, or default to 10000 for local testing
+port = int(os.environ.get("PORT", 10000))
+iface.launch(server_name="0.0.0.0", server_port=port)
