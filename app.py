@@ -2,7 +2,6 @@ import gradio as gr
 import os
 
 def chat(input_text):
-    # Simple echo response for testing
     return f"You said: {input_text}"
 
 iface = gr.Interface(
@@ -12,6 +11,5 @@ iface = gr.Interface(
     title="The Third Voice Chatbot"
 )
 
-# Use the port provided by Render, or default to 10000 for local testing
 port = int(os.environ.get("PORT", 10000))
 iface.launch(server_name="0.0.0.0", server_port=port)
